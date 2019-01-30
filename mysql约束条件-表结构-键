@@ -1,0 +1,129 @@
+⚫mysql约束条件
+   条件约束    功能描述
+    null     允许为空,默认设置
+    not null 不允许为空
+    key      索引类型
+    default  设置默认值,缺省为 NULL
+    
+⚫查看表结构及约束条件
+    mysql> desc school.restrict                        // 表名.库名
+
+⚫修改表结构(alter table)
+    add添加字段
+          mysql> alter table school.restrict
+            add
+            phone varchar(30) not null after name;    //添加新字段 phone字符类型 约束条件不能为空,放到 name 字段的后面
+            
+          mysql> alter table school.restrict
+            add
+            addr varchar(30) not null default 'beijing' first;    //添加新字段 addr字符 约束条件 非空 默认值,放到所有字段前面
+ 
+    modify 修改字段
+          mysql> alter table school.restrict
+            modify
+            addr varchar(50) default 'shanghai' after name;
+             //修改 addr 字段的类型长度为 50,修改默认值为’shanghai’,将 addr 调整到 name 字段的后面
+  
+    change 修改字段名称          
+          mysql> alter table school.restrict change name myname varchar(10);
+              //把数据表中的 name 字段重命名为 myname,同时修改了数据类型的长度
+              //change modify 都可以修改数据类型 change可修改结构名称 modify可以改变结构顺序(first after)
+    
+    drop 修改字段名称
+          mysql> alter table school.restrict drop interest;
+                    //删除数据表中的 interest 字段
+              
+    rename 修改字段名称
+          mysql> alter table school.restrict rename school.rest;
+          
+⚫MySQL 键值类型
+      INDEX 普通索引
+      UNIQUE 唯一索引
+      FULLTEXT 全文索引
+      PRIMARY KEY 主键
+      FOREIGN KEY 外键
+      
+⚫INDEX 普通索引
+      一个表中可以有多个 INDEX 字段
+      字段的值允许有重复,切可以赋 NULL 值
+      经常把做查询条件的字段设置为 INDEX 字段
+      INDEX 字段的 KEY 标志是 MUL
+      二叉树算法
+   mysql> create table school.info(
+            id int(6) not null,
+            name varchar(5),
+            sex enum('male','female'),
+            age int(3) default 1,
+            index(id),index(name));
+      Query OK, 0 rows affected (0.13 sec)
+   mysql> desc school.info;
+         
+         //创建表过程中创建索引 
+   mysql> create index age on school.info(age);                //在已有的数据表中创建索引
+   mysql> create index nianling on school.info(age);           //可以创建多个索引,索引与字段名称也可以不一样。
+ 
+   mysql> drop index name on school.info;              //在已有数据表中删除索引
+   
+   mysql> show index from school.info\G;                 //查看索引信息以列的方式呈现
+ 
+ ⚫primary key 主键索引
+      一个表中只能有一个 primary key 字段
+      对应的字段值不允许有重复,且不允许赋 NULL 值
+      如果有多个字段都作为 PRIMARY KEY,称为复合主键,必须一起创建。
+      主键字段的 KEY 标志是 PRI
+      通常与 AUTO_INCREMENT 连用
+      经常把表中能够唯一标识记录的字段设置为主键字段[记录编号字段]
+   
+   mysql> create table school.student(
+            stu_id char(9),
+            name
+            char(5),
+            primary key(stu_id));    
+            
+            //可直接定义stu_id char(9) primary key,
+   
+   
+   mysql> insert into school.student values (null,'tom');                //写入 null 数据会报错
+   ERROR 1048 (23000): Column 'stu_id' cannot be null
+   
+           //stu_id 字段自动被设置为不能为 Null,Key 下面有 Pri 标记(主键标记) 主键不能重复
+   
+   //对已经存在的数据表创建主键索引
+   mysql> alter table school.student3 add primary key(id);   
+   Query OK, 0 rows affected (0.34 sec)
+      //在已经存在的表中创建主键索引,一定要确保做为主键的字段数据中没有 null 的值
+      //如果确实已经有 null 值了,可以 delete 删除数据或者 update 更新数据为非 null
+      
+   mysql> alter table school.student3 drop primary key;
+   Query OK, 0 rows affected (0.52 sec)        //删除主键后,对应的字段数据就可以出现重复的数据了
+      
+   mysql> create table school.demo(
+            id int(100) auto_increment primary key,   //设置自增加属性 auto_increment
+            name char(10));
+   Query OK, 0 rows affected (0.16 sec)   
+            //当同时有自增长和主键时,一定要通过 alter 将自增长删除后才可以删除主键,无法直接删除主键。
+      
+⚫foreign key 外键
+   让当前表字段的值在另一个表中某个字段值的范围内选择
+      使用外键的条件:
+      表存储引擎必须是 innodb(默认就是)
+      字段类型必须一致
+      被参照字段必须是索引类型中的一种(primary key)
+      
+   mysql> create table press.book(
+      书名 char(20),
+      作者 char(10),
+      foreign key(作者) references press.author(姓名)  // foreign key(表 A 的字段名称) references 表 B(字段名称)
+      on update cascade on delete cascade);     //同步更新,同步删除 cascade级联
+      
+  查看外键
+   mysql> show create table press.book\G;
+  
+  删除外键
+   mysql> alter table press.book drop foreign key book_ibfk_1;
+   
+  在现有的数据表中创建外键
+   alter table press.book
+      add
+      foreign key(作者) references press.author(姓名)
+on update cascade on delete cascade;
