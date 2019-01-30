@@ -1,0 +1,158 @@
+⚫查看存储引擎信息
+  mysql> SHOW ENGINES\G
+  *************************** 1. row ***************************
+      Engine: InnoDB
+      Support: DEFAULT                              //此存储引擎为默认
+      Comment: Supports transactions, row-level locking, and foreign keys
+      Transactions: YES
+          XA: YES
+      Savepoints: YES
+  *************************** 2. row ***************************
+  
+ ⚫查看默认的存储类型
+   mysql> SHOW VARIABLES LIKE 'default_storage_engine';
+    +------------------------+--------+
+    | Variable_name          | Value  |
+    +------------------------+--------+
+    | default_storage_engine | InnoDB |
+    +------------------------+--------+
+    1 row in set (0.00 sec)
+    
+ ⚫修改默认存储引擎
+    mysql> SET default_storage_engine=MyISAM;              //改用MyISAM引擎
+        Query OK, 0 rows affected (0.00 sec)
+    mysql> SHOW VARIABLES LIKE 'default_storage_engine';          //确认结果
+    +------------------------+--------+
+    | Variable_name          | Value  |
+    +------------------------+--------+
+    | default_storage_engine | MyISAM |
+    +------------------------+--------+
+    1 row in set (0.00 sec)
+    
+    永久修改MySQL服务程序所采用的默认存储引擎，应将相关设置写入配置文件/etc/my.cnf，并重启服务后生效。
+    [root@dbsvr1 ~]# vim /etc/my.cnf
+    [mysqld]
+    .. ..
+    default_storage_engine=MEMORY                              //改用MEMORY引擎
+    [root@dbsvr1 ~]# systemctl  restart mysqld.service           //重启服务
+    
+    选项 -e 可调用指定的SQL操作后返回Shell命令行
+    [root@dbsvr1 ~]# mysql -u root -p123456 -e "SHOW VARIABLES LIKE 'default_storage_engine';"
+
+⚫MYISAM与INODB
+    MYISAM 支持表级锁 
+           不支持事物,事物回滚,外键
+           表名.frm     --表框架
+           表名.MYI     --表索引
+           表名.MYD     --表数据
+    InnoDB 支持行级锁
+           支持事物,事物回滚,外键
+           表名.frm     --表框架 
+           表名.ibd     --表索引及数据
+           ibdata1 
+           ib_logfile0
+           ib_logfile1
+  
+⚫锁粒度与锁类型
+   锁粒度 
+    表级锁   直接对整张表进行加锁
+    行级锁   对表内单独行加锁
+    页级锁   MYSQL管理数据的基本单位 对整个页面进行加锁
+    
+   锁类型
+    写锁     （共享锁）支持并发读                //select
+    读锁      (互斥锁)独占锁 上锁时其他线程不能进行读写     //insert update delete
+    
+  锁粒度 是存储引擎所决定的锁属性
+  锁类型 是访问方式决定的锁属性 
+  
+⚫事物特性
+  ACID atomic 原子性 consistency 一致性 Isolation 隔离性 durability 持久性
+  mysql> show variables like "autocommit";       //查看提交状态
+  mysql> set autocommit=off;                   //关闭自动提交 回车后不会提交数据操作
+  mysql> commit;                               //手动提交
+  mysql> rollback;                            //数据回滚至上一次commit提交
+
+⚫数据导入/导出
+    将/etc/passwd文件导入MySQL数据库
+    新建userdb库、user表
+    mysql> CREATE DATABASE userdb;                //建库
+    Query OK, 1 row affected (0.00 sec)
+    mysql> USE userdb;
+    Database changed
+    
+    mysql> CREATE TABLE user(                      //建表
+        -> username varchar(24) NOT NULL,
+        -> password varchar(48) DEFAULT 'x',
+        -> uid int(5) NOT NULL,
+        -> gid int(5) NOT NULL,
+        -> fullname varchar(48),
+        -> homedir varchar(64) NOT NULL,
+        -> shell varchar(24) NOT NULL
+        -> );
+    Query OK, 0 rows affected (0.70 sec)
+    
+    将/etc/passwd文件复制到/var/lib/mysql-files/目录下
+    mysql> system cp /etc/passwd /var/lib/mysql-files/  //mysql环境下用system执行linux环境命令
+    mysql> LOAD DATA INFILE '/var/lib/mysql-files/passwd'           
+        -> INTO TABLE userlist                           // 指定插入的表    
+        -> FIELDS TERMINATED BY ':'                      //定义列分隔符
+        -> LINES TERMINATED BY '\n';                     //定义行分隔符 
+    Query OK, 39 rows affected (0.11 sec)
+    Records: 39  Deleted: 0  Skipped: 0  Warnings: 0
+    
+    添加自增主键字段sn
+    mysql> ALTER TABLE user
+        -> ADD sn int(4) AUTO_INCREMENT PRIMARY KEY FIRST;
+    Query OK, 0 rows affected (0.62 sec)
+    Records: 0  Duplicates: 0  Warnings: 0
+    
+⚫修改导出数据目录及查看修改结果
+    [root@dbsvr1 ~]# mkdir  /myload  ;  chown  mysql  /myload 
+    [root@dbsvr1 ~]# vim  /etc/my.cnf 
+    [mysqld]
+    secure_file_priv="/myload"
+    [root@dbsvr1 ~]# systemctl  restart mysqld 
+    mysql> show variables like "secure_file_priv";
+    +------------------+----------+
+    | Variable_name    | Value      |
+    +------------------+----------+
+    | secure_file_priv   | /myload/ |
+    +------------------+----------+
+  
+⚫操作表记录             
+   插入数据
+      mysql> INSERT stu_info VALUES                   //插入表记录
+          -> ('Jim','girl',24),
+          -> ('Tom','boy',21),
+          -> ('Lily','girl',20);
+      Query OK, 3 rows affected (0.15 sec)
+      Records: 3  Duplicates: 0  Warnings: 0
+      
+      mysql> INSERT INTO stu_info(name,age)          //插入指定字段
+          -> VALUES('Jerry',27);
+      Query OK, 1 row affected (0.04 sec)
+      
+   删除数据   
+      mysql> DELETE FROM stu_info;
+      Query OK, 0 rows affected (0.00 sec)               //删除表记录 可支持where条件
+      
+   查询数据
+      mysql> SELECT * FROM stu_info;                     //查询数据 支持where条件
+      
+   修改数据   
+      mysql> UPDATE stu_info SET age=10;
+      Query OK, 5 rows affected (0.04 sec)
+      Rows matched: 5  Changed: 5  Warnings: 0
+            //修改所有列的信息 支持where条件修改单独项
+      
+      mysql> UPDATE stu_info SET age=20
+        -> WHERE gender='boy';
+      Query OK, 3 rows affected (0.04 sec)
+      Rows matched: 3  Changed: 3  Warnings: 0
+   
+⚫查询及匹配条件
+   基本条件
+     数值比较
+   高级条件
+操作查询结果
